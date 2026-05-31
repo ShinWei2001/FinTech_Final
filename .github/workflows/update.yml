@@ -1,0 +1,41 @@
+name: Smart-E Robo — Weekly Pipeline
+
+on:
+  schedule:
+    # 每週一 UTC 01:00（台灣時間週一 09:00）
+    - cron: "0 1 * * 1"
+  workflow_dispatch:   # 可手動觸發
+
+permissions:
+  contents: write
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install yfinance pandas numpy scipy openpyxl
+
+      - name: Run Smart-E pipeline
+        run: python pipeline.py
+
+      - name: Commit & push results.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/results.json
+          git diff --staged --quiet || \
+            git commit -m "chore: auto-update ETF analysis $(date -u +'%Y-%m-%d')"
+          git push
