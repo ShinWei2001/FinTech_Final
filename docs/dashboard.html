@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart-E Robo | 分析儀表板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --navy:#1e2d45;--navy2:#263852;--blue:#3b6ea5;--accent:#4d9de0;
+  --gold:#c9a84c;--light:#f4f7fb;--white:#fff;--text:#1e2d45;
+  --muted:#7a8fa6;--border:#dce6f0;--stock:#3b6ea5;--bond:#c9a84c;
+  --other:#2d9e6b;--radius:12px;--shadow:0 2px 16px rgba(30,45,69,.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);line-height:1.6}
+header{background:var(--navy);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.logo{color:#fff;font-family:'DM Serif Display',serif;font-size:1.35rem;letter-spacing:.5px}
+.logo span{color:var(--accent)}
+.updated{color:var(--muted);font-size:.78rem}
+main{max-width:1280px;margin:0 auto;padding:32px 24px 60px}
+.section-title{font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--navy);margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.section-title .badge{background:var(--navy);color:#fff;font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:600;padding:2px 10px;border-radius:20px}
+section{margin-bottom:48px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:#fff;border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow);border-top:3px solid var(--accent)}
+.stat-card .label{font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
+.stat-card .value{font-size:1.8rem;font-weight:600;color:var(--navy);margin-top:4px}
+.stat-card .sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.panel{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 28px;margin-bottom:20px}
+.panel-title{font-weight:600;font-size:.95rem;color:var(--navy);margin-bottom:14px}
+.scoring-note{background:#f0f6ff;border-radius:10px;padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--accent)}
+.scoring-note h4{font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:10px}
+.scoring-note table{width:100%;border-collapse:collapse;font-size:.8rem}
+.scoring-note td{padding:5px 8px;border-bottom:1px solid var(--border)}
+.scoring-note tr:last-child td{border-bottom:none}
+.scoring-note td:first-child{font-weight:600;color:var(--navy);width:76px}
+.bond-note{margin-top:10px;padding:8px 12px;background:#fdf3db;border-radius:8px;font-size:.78rem;color:#7a5800}
+.alloc-table{width:100%;border-collapse:collapse;font-size:.83rem;margin-bottom:16px}
+.alloc-table thead th{background:var(--navy);color:#fff;padding:8px 12px;text-align:left;font-size:.73rem;font-weight:600;letter-spacing:.5px}
+.alloc-table thead th:first-child{border-radius:8px 0 0 0}
+.alloc-table thead th:last-child{border-radius:0 8px 0 0}
+.alloc-table tbody tr{border-bottom:1px solid var(--border)}
+.alloc-table tbody tr:hover{background:#f0f6ff}
+.alloc-table tbody td{padding:8px 12px}
+.alloc-bar-wrap{display:flex;align-items:center;gap:6px}
+.alloc-bar{height:7px;border-radius:4px;background:var(--border);flex:1;overflow:hidden}
+.alloc-fill{height:100%;border-radius:4px}
+/* 雙欄對比 */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.compare-col{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 24px}
+.compare-col.sys{border-top:3px solid var(--navy)}
+.compare-col.usr{border-top:3px solid var(--accent)}
+.compare-col h3{font-size:.85rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.col-badge{font-size:.68rem;padding:2px 8px;border-radius:12px;font-weight:600}
+.col-badge.sys{background:var(--navy);color:#fff}
+.col-badge.usr{background:var(--accent);color:#fff}
+/* 績效卡 */
+.metrics-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px}
+.metric-block{border-radius:10px;padding:16px 18px}
+.metric-block.smart{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff}
+.metric-block.smart2{background:linear-gradient(135deg,#1a5276,#2471a3);color:#fff}
+.metric-block.equal{background:#e8edf5;border:1px solid var(--border)}
+.metric-block .mb-label{font-size:.66rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;opacity:.8}
+.metric-block.smart .mb-label,.metric-block.smart2 .mb-label{color:var(--accent);opacity:1}
+.metric-block.equal .mb-label{color:var(--navy)}
+.metric-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.metric-row .mk{font-size:.78rem}
+.metric-row .mv{font-size:1rem;font-weight:600}
+.metric-block.smart .mk,.metric-block.smart .mv,
+.metric-block.smart2 .mk,.metric-block.smart2 .mv{color:#fff}
+.metric-block.equal .mk,.metric-block.equal .mv{color:var(--navy)}
+/* 表格 */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead th{background:var(--navy);color:#fff;padding:9px 12px;text-align:left;font-weight:600;font-size:.73rem;letter-spacing:.5px;white-space:nowrap}
+thead th:first-child{border-radius:8px 0 0 0}
+thead th:last-child{border-radius:0 8px 0 0}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:hover{background:#f0f6ff}
+tbody td{padding:8px 12px;white-space:nowrap}
+.pagination{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:14px;flex-wrap:wrap}
+.pg-btn{border:1.5px solid var(--border);background:#fff;color:var(--navy);padding:4px 10px;border-radius:7px;font-size:.76rem;font-weight:600;cursor:pointer;transition:.15s;min-width:30px}
+.pg-btn:hover{border-color:var(--accent);color:var(--accent)}
+.pg-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.pg-btn:disabled{opacity:.35;cursor:default}
+.pg-info{font-size:.76rem;color:var(--muted);padding:0 6px}
+.cat{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600}
+.cat-stock{background:#e8f0fa;color:var(--stock)}
+.cat-bond{background:#fdf3db;color:#a07a10}
+.cat-other{background:#e4f5ed;color:var(--other)}
+.score-bar-wrap{display:flex;align-items:center;gap:6px}
+.score-bar{height:6px;border-radius:3px;background:var(--border);flex:1;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--accent))}
+.score-num{font-size:.78rem;font-weight:600;color:var(--navy);min-width:30px;text-align:right}
+.wt-pill{display:inline-block;padding:2px 9px;border-radius:20px;background:var(--navy);color:#fff;font-size:.76rem;font-weight:600}
+.rank-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:.74rem;font-weight:700}
+.rank-1{background:var(--gold);color:#fff}
+.rank-2{background:#b0bec5;color:#fff}
+.rank-3{background:#a0522d;color:#fff}
+.rank-other{background:var(--border);color:var(--navy)}
+.slot-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.slot-label{width:52px;font-size:.78rem;font-weight:600}
+.slot-bar{flex:1;height:9px;border-radius:5px;overflow:hidden;background:var(--border)}
+.slot-fill-stock{height:100%;border-radius:5px;background:var(--stock)}
+.slot-fill-bond{height:100%;border-radius:5px;background:var(--bond)}
+.slot-fill-other{height:100%;border-radius:5px;background:var(--other)}
+.slot-count{font-size:.8rem;color:var(--muted);width:75px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.chart-box{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.chart-label{font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:12px}
+.legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.78rem}
+.dot{width:9px;height:9px;border-radius:50%}
+/* 投資人輸入區 */
+.pref-box{background:linear-gradient(135deg,#f0f6ff,#e8f4fd);border-radius:var(--radius);padding:22px 26px;border:1.5px solid var(--accent);margin-bottom:20px}
+.pref-box h4{font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:6px}
+.pref-box p{font-size:.82rem;color:var(--muted);margin-bottom:14px}
+.tag-input-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;background:#fff;border-radius:8px;border:1.5px solid var(--border);min-height:42px;cursor:text}
+.tag-input-wrap:focus-within{border-color:var(--accent)}
+.tag{display:inline-flex;align-items:center;gap:4px;background:var(--navy);color:#fff;border-radius:20px;padding:3px 10px;font-size:.78rem;font-weight:600}
+.tag .rm{cursor:pointer;opacity:.7;font-size:.9rem;margin-left:2px}
+.tag .rm:hover{opacity:1}
+.tag.invalid{background:#dc3545}
+.tag-raw-input{border:none;outline:none;font-size:.82rem;min-width:100px;flex:1;background:transparent;color:var(--text)}
+.pref-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn{padding:8px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:.15s}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{background:var(--navy2)}
+.btn-secondary{background:#fff;color:var(--navy);border:1.5px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{opacity:.88}
+/* AI 分析 */
+.ai-box{background:linear-gradient(135deg,#1e2d45,#263852);border-radius:var(--radius);padding:24px 28px;color:#fff;margin-bottom:20px}
+.ai-box h3{font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.ai-content{font-size:.85rem;line-height:1.75;color:#d0dce8;white-space:pre-wrap}
+.ai-loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem}
+.ai-spinner{width:18px;height:18px;border:2px solid #4d9de040;border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+#loading{text-align:center;padding:80px 0;color:var(--muted);font-size:1rem}
+.spinner{display:inline-block;width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.filter-btn{border:1.5px solid var(--border);background:#fff;color:var(--navy);padding:5px 13px;border-radius:20px;font-size:.76rem;font-weight:600;cursor:pointer;transition:.15s}
+.filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.filter-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.bt-note{border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:16px;font-size:.81rem;color:var(--text)}
+@media(max-width:768px){
+  main{padding:14px 10px 40px}
+  .metrics-3,.compare-grid,.chart-grid{grid-template-columns:1fr}
+  header{padding:0 14px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Smart<span>-E</span> Robo</div>
+  <div class="updated" id="updated-at">載入中...</div>
+</header>
+<main>
+  <div id="loading"><div class="spinner"></div><br>正在載入分析資料...</div>
+  <div id="content" style="display:none">
+
+    <!-- ① 概覽 -->
+    <section>
+      <div class="section-title">整體概覽 <span class="badge">OVERVIEW</span></div>
+      <div class="stat-grid" id="stat-grid"></div>
+    </section>
+
+    <!-- ② Stage 0 -->
+    <section>
+      <div class="section-title">Stage 0 — 市值預篩 <span class="badge">318 → 100 檔</span></div>
+      <div class="panel">
+        <div class="panel-title">各類型名額分配（按市值比例，每類至少 10 檔）</div>
+        <div id="slots-viz"></div>
+      </div>
+    </section>
+
+    <!-- ③ Stage 1 -->
+    <section>
+      <div class="section-title">Stage 1 — 量化評分排行 <span class="badge">100 檔</span></div>
+      <div class="scoring-note">
+        <h4>📐 評分方法說明</h4>
+        <table>
+          <tr><td>股票型</td><td>以 <strong>台灣加權指數（^TWII）</strong>為 Benchmark，計算 ADV、主動風險、費用率三項指標，類型內百分比排名後等權加總。</td></tr>
+          <tr><td>其他型</td><td>以 <strong>VT（Vanguard Total World）</strong>為 Benchmark，涵蓋商品、槓桿反向、海外資產，同樣計算三項指標排名。</td></tr>
+          <tr><td>債券型</td><td>Yahoo Finance 不支援台灣債券 ETF 字母後綴代碼，Active Risk 給予類型中位分（50）；ADV 以 <strong>市值（AUM）代理流動性</strong>，費用率採投信公會公告資料。</td></tr>
+        </table>
+        <div class="bond-note">⚠️ 債券型因資料來源限制，Active Risk 一律給予中位分，排名主要反映流動性（AUM）與費用率。</div>
+      </div>
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div class="panel-title" style="margin:0">綜合評分排行（ADV + 主動風險 + 費用率）</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="filter-btn active" data-cat="all">全部</button>
+            <button class="filter-btn" data-cat="stock">股票型</button>
+            <button class="filter-btn" data-cat="bond">債券型</button>
+            <button class="filter-btn" data-cat="other">其他型</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>#</th><th>代碼</th><th>類型</th><th>市值(億)</th>
+            <th>ADV分</th><th>風險分</th><th>費用分</th><th>總分</th><th>進優選池</th>
+          </tr></thead><tbody id="score-tbody"></tbody></table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </section>
+
+    <!-- ④ 投資人偏好輸入 -->
+    <section id="pref-section">
+      <div class="section-title">投資人偏好設定 <span class="badge">選填</span></div>
+      <div class="pref-box">
+        <h4>🎯 有偏好的 ETF 嗎？</h4>
+        <p>輸入你想納入的台灣 ETF 代碼（限 318 檔資料庫內），系統將保留你的選擇，並從剩餘名額推薦最優 ETF。若未輸入則直接顯示系統推薦。</p>
+        <div class="tag-input-wrap" id="tag-wrap" onclick="document.getElementById('tag-raw').focus()">
+          <input id="tag-raw" class="tag-raw-input" placeholder="輸入代碼後按 Enter 或逗號，例：0050" autocomplete="off" autocapitalize="off">
+        </div>
+        <div class="pref-actions">
+          <button class="btn btn-primary" id="btn-apply">✅ 確認並產生推薦</button>
+          <button class="btn btn-secondary" id="btn-clear">清除偏好</button>
+        </div>
+        <div id="pref-hint" style="margin-top:10px;font-size:.8rem;color:var(--muted)"></div>
+      </div>
+    </section>
+
+    <!-- ⑤ Stage 2 雙欄對比 -->
+    <section>
+      <div class="section-title">Stage 2 — 優選池 <span class="badge">前 10 檔</span></div>
+      <div class="compare-grid">
+        <!-- 系統推薦 -->
+        <div class="compare-col sys">
+          <h3>🤖 系統推薦 <span class="col-badge sys">Smart-E</span></h3>
+          <div id="sys-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
+          <div class="chart-grid" style="grid-template-columns:1fr;gap:12px">
+            <div class="chart-box" style="padding:14px">
+              <div class="chart-label">📊 MVO 配置權重</div>
+              <canvas id="sys-weight-chart" height="200"></canvas>
+            </div>
+            <div class="chart-box" style="padding:14px">
+              <div class="chart-label">⚡ 效率前緣</div>
+              <canvas id="sys-frontier-chart" height="180"></canvas>
+            </div>
+          </div>
+        </div>
+        <!-- 含投資人自選 -->
+        <div class="compare-col usr">
+          <h3>👤 含投資人自選 <span class="col-badge usr">Custom</span></h3>
+          <div id="usr-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
+          <div class="chart-grid" style="grid-template-columns:1fr;gap:12px">
+            <div class="chart-box" style="padding:14px">
+              <div class="chart-label">📊 MVO 配置權重</div>
+              <canvas id="usr-weight-chart" height="200"></canvas>
+            </div>
+            <div class="chart-box" style="padding:14px">
+              <div class="chart-label">⚡ 效率前緣</div>
+              <canvas id="usr-frontier-chart" height="180"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 回測績效 -->
+    <section>
+      <div class="section-title">回測績效 <span class="badge">三方對比</span></div>
+      <!-- 三欄績效 -->
+      <div class="metrics-3" id="metrics-3"></div>
+      <!-- 說明 -->
+      <div id="metrics-note"></div>
+      <!-- 雙欄配置明細 -->
+      <div class="compare-grid" style="margin-bottom:20px">
+        <div class="compare-col sys" id="sys-alloc-panel">
+          <h3>🤖 系統推薦配置明細</h3>
+          <table class="alloc-table"><thead><tr>
+            <th>#</th><th>代碼</th><th>類型</th><th>權重</th><th>視覺化</th><th>費用率</th><th>市值(億)</th>
+          </tr></thead><tbody id="sys-alloc-tbody"></tbody></table>
+        </div>
+        <div class="compare-col usr" id="usr-alloc-panel">
+          <h3>👤 含自選配置明細</h3>
+          <table class="alloc-table"><thead><tr>
+            <th>#</th><th>代碼</th><th>類型</th><th>權重</th><th>視覺化</th><th>費用率</th><th>市值(億)</th>
+          </tr></thead><tbody id="usr-alloc-tbody"></tbody></table>
+        </div>
+      </div>
+      <!-- 折線圖 -->
+      <div class="chart-box" style="padding:22px">
+        <div class="legend" id="bt-legend"></div>
+        <canvas id="backtest-chart" height="110"></canvas>
+      </div>
+    </section>
+
+    <!-- ⑦ AI 分析建議 -->
+    <section>
+      <div class="section-title">AI 投資組合分析 <span class="badge">Claude 驅動</span></div>
+      <div class="ai-box" id="ai-box">
+        <h3>🤖 Smart-E 分析師</h3>
+        <div id="ai-content" class="ai-content">
+          <div class="ai-loading"><div class="ai-spinner"></div>點擊下方按鈕產生分析...</div>
+        </div>
+      </div>
+      <button class="btn btn-accent" id="btn-ai" style="margin-bottom:10px">✨ 產生 AI 投資建議</button>
+      <button class="btn btn-secondary" id="btn-ai2" style="margin-bottom:10px">🔄 重新分析</button>
+    </section>
+
+  </div>
+</main>
+<script>
+// ════════════════════════════════════════════════════════
+// 常數與工具
+// ════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const pct  = v => (v*100).toFixed(1)+'%';
+const fmt2 = v => Number(v).toFixed(2);
+const CAT_LABEL = {stock:'股票型',bond:'債券型',other:'其他型'};
+const CAT_COLOR = {stock:'#3b6ea5',bond:'#c9a84c',other:'#2d9e6b'};
+
+// 318 檔靜態資料庫（供偏好輸入驗證用）
+const ALL_TICKERS_SET = new Set();
+
+// seeded PRNG
+function makeRng(seed){
+  let s=seed>>>0;
+  return ()=>{
+    s+=0x6D2B79F5;
+    let t=Math.imul(s^s>>>15,1|s);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return((t^t>>>14)>>>0)/4294967296;
+  };
+}
+
+// ════════════════════════════════════════════════════════
+// 全域狀態
+// ════════════════════════════════════════════════════════
+let gData       = null;
+let prefTickers = [];       // 投資人自選代碼
+let sysState    = {removedSet: new Set(), mvo: null, wts: {}};
+let usrState    = {removedSet: new Set(), mvo: null, wts: {}};
+let charts      = {};       // 所有 Chart 實例
+
+function destroyChart(key){
+  if(charts[key]){charts[key].destroy();delete charts[key];}
+}
+
+// ════════════════════════════════════════════════════════
+// MVO & 回測（前端計算）
+// ════════════════════════════════════════════════════════
+// MVO 前端計算（三目標：最大夏普 / 最大報酬 / 最小波動）
+// ════════════════════════════════════════════════════════
+function calcMVO(priceMap, rf=0.015, nSim=5000){
+  const tickers=Object.keys(priceMap);
+  if(tickers.length<2) return null;
+  const seed=tickers.slice().sort().join(',')
+    .split('').reduce((h,c)=>((h<<5)-h+c.charCodeAt(0))|0,0);
+  const rng=makeRng(seed);
+  const retMap={};
+  tickers.forEach(t=>{
+    const px=priceMap[t],r=[];
+    for(let i=1;i<px.length;i++) r.push((px[i]-px[i-1])/px[i-1]);
+    retMap[t]=r;
+  });
+  const minLen=Math.min(...tickers.map(t=>retMap[t].length));
+  const rets=tickers.map(t=>retMap[t].slice(-minLen));
+  const n=tickers.length;
+  const mu=rets.map(r=>r.reduce((s,v)=>s+v,0)/r.length*252);
+  const cov=Array.from({length:n},(_,i)=>
+    Array.from({length:n},(_,j)=>{
+      const ri=rets[i],rj=rets[j],l=ri.length,mi=mu[i]/252,mj=mu[j]/252;
+      let s=0; for(let k=0;k<l;k++) s+=(ri[k]-mi)*(rj[k]-mj);
+      return s/(l-1)*252;
+    })
+  );
+  let bS={s:-Infinity,w:null},bR={r:-Infinity,w:null},bV={v:Infinity,w:null};
+  const frontier=[];
+  for(let s=0;s<nSim;s++){
+    const g=tickers.map(()=>-Math.log(rng()+1e-10));
+    const gs=g.reduce((a,b)=>a+b,0);
+    const w=g.map(v=>v/gs);
+    const ret=w.reduce((s,wi,i)=>s+wi*mu[i],0);
+    let vol=0;
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++) vol+=w[i]*w[j]*cov[i][j];
+    vol=Math.sqrt(Math.max(vol,0));
+    const shp=vol>0?(ret-rf)/vol:0;
+    frontier.push({ret,vol,sharpe:shp});
+    if(shp>bS.s) bS={s:shp,w:[...w]};
+    if(ret>bR.r) bR={r:ret,w:[...w]};
+    if(vol<bV.v) bV={v:vol,w:[...w]};
+  }
+  function mkRes(w,label){
+    const wts={};
+    tickers.forEach((t,i)=>wts[t]=Math.round(w[i]*10000)/10000);
+    const r=w.reduce((s,wi,i)=>s+wi*mu[i],0);
+    let v=0; for(let i=0;i<n;i++) for(let j=0;j<n;j++) v+=w[i]*w[j]*cov[i][j];
+    v=Math.sqrt(Math.max(v,0));
+    return{label,tickers,weights:wts,expectedReturn:r,volatility:v,
+           sharpe:v>0?(r-rf)/v:0};
+  }
+  return{
+    maxSharpe: mkRes(bS.w,'最大夏普比率'),
+    maxReturn: mkRes(bR.w,'最大報酬'),
+    minVol:    mkRes(bV.w,'最小化波動'),
+    frontier,tickers,
+    // 預設用 maxSharpe 向後相容
+    weights: Object.fromEntries(tickers.map((t,i)=>[t,Math.round(bS.w[i]*10000)/10000])),
+    expectedReturn: bS.w.reduce((s,wi,i)=>s+wi*mu[i],0),
+    volatility: (()=>{let v=0;for(let i=0;i<n;i++)for(let j=0;j<n;j++)v+=bS.w[i]*bS.w[j]*cov[i][j];return Math.sqrt(Math.max(v,0));})(),
+    sharpe: bS.s,
+  };
+}
+
+
+function calcBacktest(priceMap,weights){
+  const tickers=Object.keys(weights);
+  const wArr=tickers.map(t=>weights[t]);
+  const wSum=wArr.reduce((s,v)=>s+v,0);
+  const wNorm=wArr.map(v=>v/wSum);
+  const minLen=Math.min(...tickers.map(t=>priceMap[t]?.length||0));
+  if(minLen<10) return null;
+  const rets=tickers.map(t=>{
+    const px=priceMap[t].slice(-minLen);
+    return px.map((v,i)=>i===0?0:(v-px[i-1])/px[i-1]);
+  });
+  const portRet=rets[0].map((_,i)=>
+    tickers.reduce((s,_,ti)=>s+wNorm[ti]*rets[ti][i],0)
+  ).slice(1);
+  let cum=1;const cumArr=portRet.map(r=>{cum*=(1+r);return cum;});
+  let peak=1,mdd=0;
+  cumArr.forEach(v=>{if(v>peak)peak=v;if((v-peak)/peak<mdd)mdd=(v-peak)/peak;});
+  const mean=portRet.reduce((s,v)=>s+v,0)/portRet.length;
+  const std=Math.sqrt(portRet.reduce((s,v)=>s+(v-mean)**2,0)/portRet.length);
+  return{cumReturn:cumArr[cumArr.length-1]-1,mdd,sharpe:std>0?mean/std*Math.sqrt(252):0,cumArr};
+}
+
+// ════════════════════════════════════════════════════════
+// 輔助：取標的資訊
+// ════════════════════════════════════════════════════════
+function getInfo(ticker){
+  const elite=gData.stage2.elite_pool||[];
+  const ai=gData.stage2.all_ticker_info||{};
+  return elite.find(e=>e.ticker===ticker)||ai[ticker]||{};
+}
+
+// ════════════════════════════════════════════════════════
+// 初始化
+// ════════════════════════════════════════════════════════
+async function init(){
+  let data;
+  try{
+    const res=await fetch('data/results.json');
+    if(!res.ok) throw new Error('無法載入 results.json');
+    data=await res.json();
+  }catch(e){
+    $('loading').innerHTML=`<p style="color:#c0392b">⚠️ ${e.message}</p>`;
+    return;
+  }
+  gData=data;
+  $('loading').style.display='none';
+  $('content').style.display='block';
+  $('updated-at').textContent='更新：'+data.generated_at.slice(0,10);
+
+  // 建立 ticker set（price_data 涵蓋全部 318 檔中可下載的，是最完整來源）
+  [
+    ...Object.keys(data.price_data||{}),
+    ...(data.stage0.etf_list||[]).map(e=>e.ticker),
+    ...Object.keys(data.stage2.all_ticker_info||{}),
+  ].forEach(t=>ALL_TICKERS_SET.add(t));
+
+  renderOverview(data);
+  renderStage0(data);
+  renderStage1(data);
+  // 自動用無偏好狀態產生初始推薦
+  applyPrefs();
+}
+
+// ════════════════════════════════════════════════════════
+// ① 概覽
+// ════════════════════════════════════════════════════════
+function renderOverview(data){
+  const mvo=data.stage2.mvo||{};
+  const bt=data.backtest?.metrics||{};
+  const me=bt.equal_weight_100;
+  const cards=[
+    {label:'評分 ETF 數',    value:data.stage1.scored_count,                         sub:'Stage 1 有效',   id:'ov-scored'},
+    {label:'優選池',          value:(data.stage2.elite_pool?.length||0)+' 檔',         sub:'前 10% 精選',    id:'ov-pool'},
+    {label:'預期年報酬',      value:mvo.expected_return!=null?pct(mvo.expected_return):'—', sub:'MVO 最佳化', id:'ov-ret'},
+    {label:'夏普比率',        value:mvo.sharpe!=null?fmt2(mvo.sharpe):'—',             sub:'Smart-E 投組',   id:'ov-sharpe'},
+    {label:'Smart-E 累積報酬',value:'計算中...',                                        sub:me?'vs 等權 '+pct(me.cumulative_return):'', id:'ov-cum'},
+    {label:'最大回檔',        value:'計算中...',                                        sub:'Smart-E',        id:'ov-mdd'},
+  ];
+  $('stat-grid').innerHTML=cards.map(c=>`
+    <div class="stat-card" id="${c.id}">
+      <div class="label">${c.label}</div>
+      <div class="value" id="${c.id}-val">${c.value}</div>
+      <div class="sub" id="${c.id}-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// ② Stage 0
+// ════════════════════════════════════════════════════════
+function renderStage0(data){
+  const s=data.stage0.slots;
+  $('slots-viz').innerHTML=[
+    {cat:'stock',label:'股票型',n:s.stock},
+    {cat:'bond',label:'債券型',n:s.bond},
+    {cat:'other',label:'其他型',n:s.other},
+  ].map(r=>`
+    <div class="slot-bar-row">
+      <div class="slot-label"><span class="cat cat-${r.cat}">${r.label}</span></div>
+      <div class="slot-bar"><div class="slot-fill-${r.cat}" style="width:${r.n}%"></div></div>
+      <div class="slot-count">${r.n} 檔 / ${r.n}%</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// ③ Stage 1 分頁表格
+// ════════════════════════════════════════════════════════
+let allScores=[],curPage=1,curCat='all';
+const PAGE_SIZE=10;
+
+function renderStage1(data){
+  allScores=data.stage1.all_scores;
+  curPage=1;curCat='all';
+  renderScoreTable();
+  document.querySelectorAll('.filter-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      curCat=btn.dataset.cat;curPage=1;
+      renderScoreTable();
+    });
+  });
+}
+
+function renderScoreTable(){
+  const rows=curCat==='all'?allScores:allScores.filter(r=>r.category===curCat);
+  const eliteSet=new Set((gData.stage2.elite_pool||[]).map(e=>e.ticker));
+  const total=rows.length,totalPages=Math.ceil(total/PAGE_SIZE);
+  const pageRows=rows.slice((curPage-1)*PAGE_SIZE,curPage*PAGE_SIZE);
+  $('score-tbody').innerHTML=pageRows.map(r=>{
+    const inPool=eliteSet.has(r.ticker);
+    const rc=['rank-1','rank-2','rank-3'][r.score_rank-1]||'rank-other';
+    return`<tr>
+      <td><span class="rank-num ${rc}">${r.score_rank}</span></td>
+      <td><strong>${r.ticker}</strong></td>
+      <td><span class="cat cat-${r.category}">${CAT_LABEL[r.category]}</span></td>
+      <td>${r.mktcap?.toFixed(0)??'—'}</td>
+      <td>${sBar(r.score_adv)}</td>
+      <td>${sBar(r.score_risk)}</td>
+      <td>${sBar(r.score_cost)}</td>
+      <td>${sBar(r.total_score,true)}</td>
+      <td style="text-align:center">${inPool?'✅':'—'}</td>
+    </tr>`;
+  }).join('');
+  let pg=`<button class="pg-btn" onclick="goPage(${curPage-1})" ${curPage===1?'disabled':''}>‹</button>`;
+  for(let p=1;p<=totalPages;p++){
+    if(p===1||p===totalPages||Math.abs(p-curPage)<=2)
+      pg+=`<button class="pg-btn ${p===curPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    else if(Math.abs(p-curPage)===3) pg+=`<span class="pg-info">…</span>`;
+  }
+  pg+=`<button class="pg-btn" onclick="goPage(${curPage+1})" ${curPage===totalPages?'disabled':''}>›</button>`;
+  pg+=`<span class="pg-info">第 ${curPage}/${totalPages} 頁，共 ${total} 筆</span>`;
+  $('pagination').innerHTML=pg;
+}
+function goPage(p){
+  const rows=curCat==='all'?allScores:allScores.filter(r=>r.category===curCat);
+  const tp=Math.ceil(rows.length/PAGE_SIZE);
+  if(p<1||p>tp) return;
+  curPage=p;renderScoreTable();
+}
+function sBar(val,bold=false){
+  const v=Math.min(Math.max(val||0,0),100);
+  return`<div class="score-bar-wrap">
+    <div class="score-bar"><div class="score-fill" style="width:${v}%"></div></div>
+    <div class="score-num" ${bold?'style="font-weight:700"':''}>${v.toFixed(0)}</div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// ④ 投資人偏好輸入
+// ════════════════════════════════════════════════════════
+const tagRaw=$('tag-raw');
+tagRaw.addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===','||e.key===' '){
+    e.preventDefault();
+    addTag(tagRaw.value.trim().replace(',','').toUpperCase());
+    tagRaw.value='';
+  } else if(e.key==='Backspace'&&!tagRaw.value){
+    if(prefTickers.length>0){
+      prefTickers.pop();
+      renderTags();
+    }
+  }
+});
+tagRaw.addEventListener('blur',()=>{
+  if(tagRaw.value.trim()){
+    addTag(tagRaw.value.trim().toUpperCase());
+    tagRaw.value='';
+  }
+});
+
+function addTag(t){
+  if(!t) return;
+  const clean=t.replace(/[^0-9A-Za-z]/g,'');
+  if(!clean) return;
+  if(prefTickers.includes(clean)) return;
+  prefTickers.push(clean);
+  renderTags();
+}
+
+function renderTags(){
+  const wrap=$('tag-wrap');
+  wrap.querySelectorAll('.tag').forEach(el=>el.remove());
+  prefTickers.forEach((t,i)=>{
+    const valid=ALL_TICKERS_SET.has(t)||ALL_TICKERS_SET.size===0;
+    const span=document.createElement('span');
+    span.className='tag'+(valid?'':' invalid');
+    span.innerHTML=`${t} <span class="rm" onclick="removeTag(${i})">×</span>`;
+    wrap.insertBefore(span,tagRaw);
+  });
+  const invalid=prefTickers.filter(t=>ALL_TICKERS_SET.size>0&&!ALL_TICKERS_SET.has(t));
+  $('pref-hint').textContent=invalid.length
+    ?`⚠️ 找不到代碼：${invalid.join('、')}，請確認是否在 318 檔資料庫內`
+    :prefTickers.length?`已選 ${prefTickers.length} 檔偏好 ETF，系統將推薦剩餘 ${Math.max(0,10-prefTickers.length)} 檔`:'';
+}
+function removeTag(i){ prefTickers.splice(i,1); renderTags(); }
+function clearPrefs(){ prefTickers=[]; renderTags(); applyPrefs(); }
+
+function applyPrefs(){
+  if(!gData){
+    setTimeout(applyPrefs, 300);
+    return;
+  }
+  const validPrefs=prefTickers.filter(t=>ALL_TICKERS_SET.has(t)||ALL_TICKERS_SET.size===0);
+  buildBothPortfolios(validPrefs);
+}
+
+// ════════════════════════════════════════════════════════
+// ⑤ 建立兩套投組
+// ════════════════════════════════════════════════════════
+function buildBothPortfolios(validPrefs){
+  try{
+  const priceData  = gData.price_data||{};
+  const mvoWts     = gData.stage2.mvo?.weights||{};
+  const sysTickers = Object.keys(mvoWts);
+  const scoreMap   = {};
+  (gData.stage1.all_scores||[]).forEach(r=>scoreMap[r.ticker]=r.total_score||0);
+
+  if(!sysTickers.length){ console.warn('No MVO weights'); return; }
+
+  // ── 共用輔助：給定標的清單，建立 priceMap 並跑 MVO，回傳完整 state 資料
+  function buildState(tickers, prefSet){
+    // 只保留有 priceData 的標的（確保回測和 MVO 用同一套）
+    const validTickers = tickers.filter(t => priceData[t]);
+    if(validTickers.length < 2) return null;
+    const pMap = Object.fromEntries(validTickers.map(t=>[t,priceData[t]]));
+    const mvo  = calcMVO(pMap);
+    if(!mvo) return null;
+    // 預設用 maxSharpe 的權重
+    return {
+      allTickers:    tickers,          // 顯示全部（含無 price 的）
+      validTickers,                    // 實際跑 MVO 和回測的
+      wts:           mvo.maxSharpe.weights,
+      priceData:     priceData,
+      pMap,                            // 已過濾過的 priceMap
+      mvoResult:     mvo,              // 三目標結果
+      removedSet:    new Set(),
+      prefSet:       prefSet||new Set(),
+      activeStrategy:'maxSharpe',
+      sameAsSys:     false,
+      _cachedMvo:    mvo,
+    };
+  }
+
+  // ── 系統推薦
+  const sysBuilt = buildState(sysTickers, new Set());
+  if(!sysBuilt){ console.warn('sys buildState failed'); return; }
+  Object.assign(sysState, sysBuilt);
+
+  // ── 含投資人自選
+  if(validPrefs.length > 0){
+    const prefSet  = new Set(validPrefs);
+    const sysSet   = new Set(sysTickers);
+    const newPrefs = validPrefs.filter(t=>!sysSet.has(t));
+
+    if(newPrefs.length === 0){
+      // 全部自選都已在系統推薦 → 兩欄完全相同
+      Object.assign(usrState, {
+        ...sysBuilt,
+        prefSet,
+        sameAsSys:  true,
+        pMap:       Object.assign({}, sysBuilt.pMap||{}),
+        wts:        Object.assign({}, sysBuilt.wts||{}),
+        removedSet: new Set(),
+      });
+      $('pref-hint').textContent =
+        `✅ 你選的 ${validPrefs.join('、')} 已在系統推薦裡，兩欄結果相同`;
+    } else {
+      // 有新自選 → 組成新10檔清單
+      let usrTickers = [...sysTickers];
+      for(const t of newPrefs){
+        if(!usrTickers.includes(t)) usrTickers.push(t);
+        while(usrTickers.length > 10){
+          // 踢掉分數最低的非自選
+          const drop = usrTickers
+            .filter(x=>!prefSet.has(x))
+            .sort((a,b)=>(scoreMap[a]||0)-(scoreMap[b]||0))[0];
+          if(drop) usrTickers=usrTickers.filter(x=>x!==drop); else break;
+        }
+      }
+      if(usrTickers.length>10) usrTickers=usrTickers.slice(0,10);
+
+      const usrBuilt = buildState(usrTickers, prefSet);
+      if(usrBuilt){
+        Object.assign(usrState, usrBuilt);
+        usrState.sameAsSys=false;
+      }
+      $('pref-hint').textContent =
+        `✅ 新增 ${newPrefs.join('、')}，替換系統推薦中分數最低的標的`;
+    }
+  } else {
+    // 無偏好
+    usrState.allTickers=[]; usrState.wts={}; usrState.priceData=priceData;
+    usrState.prefSet=new Set(); usrState.sameAsSys=false; usrState.removedSet=new Set();
+    usrState.pMap={}; usrState.mvoResult=null; usrState._cachedMvo=null;
+  }
+
+  renderBothStage2();
+  renderBothBacktest();
+  }catch(e){ console.error('buildBothPortfolios error:',e); alert('錯誤：'+e.message); }
+}
+
+// ════════════════════════════════════════════════════════
+// 渲染 Stage 2 雙欄
+// ════════════════════════════════════════════════════════
+function renderBothStage2(){
+  renderOneCol('sys', sysState);
+  if(usrState.sameAsSys){
+    // 完全複製 sys 的結果，不重跑 MVO
+    usrState.wts           = {...sysState.wts};
+    usrState.activeStrategy= sysState.activeStrategy||'maxSharpe';
+  }
+  renderOneCol('usr', usrState);
+}
+
+function renderOneCol(mode, state){
+  const {allTickers, wts, removedSet, priceData} = state; const prefSet = state.prefSet instanceof Set ? state.prefSet : new Set(state.prefSet||[]);
+  const activeWts=Object.fromEntries(Object.entries(wts).filter(([t])=>!removedSet.has(t)));
+  const cardsEl=$(mode+'-cards');
+
+  if(!allTickers.length){
+    cardsEl.innerHTML='<div style="color:var(--muted);font-size:.85rem;grid-column:1/-1;padding:20px 0">尚未設定偏好 ETF，請在上方輸入後點擊「確認並產生推薦」。</div>';
+    destroyChart(mode+'-wc'); destroyChart(mode+'-fc');
+    return;
+  }
+
+  // 若自選全在系統推薦裡，顯示說明
+  if(mode==='usr' && state.sameAsSys){
+    cardsEl.insertAdjacentHTML('beforebegin',
+      '<div style="background:#e8f4fd;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.82rem;color:#1a5276;grid-column:1/-1">'+
+      '✅ 你選的 ETF 已在系統推薦裡，兩欄配置完全相同。</div>');
+  }
+
+  // 卡片
+  const hint=removedSet.size>0
+    ?`⚡ 已移除 ${[...removedSet].join('、')} — 再點可加回`
+    :'💡 點選卡片可移除並重算 MVO';
+  cardsEl.innerHTML=`<div style="grid-column:1/-1;font-size:.76rem;color:var(--muted);margin-bottom:4px">${hint}</div>`+
+    allTickers.map(t=>{
+      const info=getInfo(t);
+      const cat=info.category||'stock';
+      const w=activeWts[t]||0;
+      const isRm=removedSet.has(t);
+      const isPref=prefSet.has(t);
+      return`<div onclick="onToggle('${mode}','${t}')" style="cursor:pointer;transition:.2s;
+        background:${isRm?'#fff0f0':'var(--light)'};border-radius:9px;padding:12px 14px;
+        border-left:3px solid ${isRm?'#dc3545':isPref?'#4d9de0':CAT_COLOR[cat]};
+        opacity:${isRm?0.55:1}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <strong style="font-size:.9rem">${t}${isPref?'<span style="font-size:.65rem;background:var(--accent);color:#fff;padding:1px 5px;border-radius:10px;margin-left:4px">自選</span>':''}</strong>
+          <span style="display:inline-block;padding:2px 8px;border-radius:16px;font-size:.72rem;font-weight:700;
+            background:${isRm?'#dc3545':'var(--navy)'};color:#fff">
+            ${isRm?'已移除':(w*100).toFixed(1)+'%'}
+          </span>
+        </div>
+        <span class="cat cat-${cat}">${CAT_LABEL[cat]}</span>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:5px">
+          費用率 <strong>${info.cost!=null?info.cost+'%':'—'}</strong> ｜
+          市值 <strong>${info.mktcap!=null?Math.round(info.mktcap)+'億':'—'}</strong>
+        </div>
+      </div>`;
+    }).join('');
+
+  // ── 三目標 MVO（直接用 state._cachedMvo，已在 buildState/onToggle 裡算好）
+  let mvoResult = state._cachedMvo||null;
+  // sameAsSys 時直接用 sys 的快取
+  if(state.sameAsSys) mvoResult = sysState._cachedMvo||null;
+
+  // 直接用 maxSharpe 的權重（最佳夏普比率）
+  const stratWts=mvoResult?mvoResult.maxSharpe.weights:activeWts;
+
+  // ── 圓餅圖
+  destroyChart(mode+'-wc');
+  const pieLabels=Object.keys(stratWts).filter(t=>!removedSet.has(t));
+  if(pieLabels.length>0){
+    const pieVals=pieLabels.map(t=>(stratWts[t]*100).toFixed(2));
+    const pieColors=pieLabels.map(t=>CAT_COLOR[getInfo(t).category||'stock']);
+    charts[mode+'-wc']=new Chart($(mode+'-weight-chart'),{
+      type:'doughnut',
+      data:{labels:pieLabels,datasets:[{data:pieVals,backgroundColor:pieColors,borderWidth:2,borderColor:'#fff'}]},
+      options:{
+        onClick(_,els){if(els.length) onToggle(mode,pieLabels[els[0].index]);},
+        plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10},
+          onClick(_,item){onToggle(mode,pieLabels[item.index]);}}},
+        cutout:'55%'
+      }
+    });
+  }
+
+  // ── 效率前緣（標注三個目標點）
+  destroyChart(mode+'-fc');
+  if(mvoResult&&mvoResult.frontier.length>1){
+    const step=Math.max(1,Math.floor(mvoResult.frontier.length/600));
+    const pts=mvoResult.frontier.filter((_,i)=>i%step===0);
+    const shs=pts.map(p=>p.sharpe),minS=Math.min(...shs),maxS=Math.max(...shs);
+    const bgC=shs.map(s=>{const t=(s-minS)/(maxS-minS+1e-9);return`rgba(${Math.round(30+t*47)},${Math.round(110+t*48)},${Math.round(165+t*59)},0.65)`;});
+    const mvo=mvoResult.maxSharpe;
+    charts[mode+'-fc']=new Chart($(mode+'-frontier-chart'),{
+      type:'scatter',
+      data:{datasets:[{
+        label:'模擬投組',
+        data:pts.map(p=>({x:p.vol*100,y:p.ret*100})),
+        backgroundColor:bgC,pointRadius:2.5
+      }]},
+      options:{
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>`波動 ${ctx.parsed.x.toFixed(1)}% | 報酬 ${ctx.parsed.y.toFixed(1)}%`}}
+        },
+        scales:{
+          x:{title:{display:true,text:'年化波動率 (%)',font:{size:10}}},
+          y:{title:{display:true,text:'年化報酬率 (%)',font:{size:10}}}
+        }
+  }
+}
+
+function var_accent(){ return 'var(--accent)'; }
+
+
+
+// ════════════════════════════════════════════════════════
+// 互動：切換移除/加回
+// ════════════════════════════════════════════════════════
+function onToggle(mode, ticker){
+  const state=mode==='sys'?sysState:usrState;
+  const active=Object.keys(state.wts).filter(t=>!state.removedSet.has(t));
+  if(state.removedSet.has(ticker)){
+    state.removedSet.delete(ticker);
+  } else {
+    if(active.length<=2){alert('至少需保留 2 檔才能計算 MVO');return;}
+    state.removedSet.add(ticker);
+  }
+  // 重算三目標 MVO（用 pMap 確保和回測一致）
+  const activeKeys=Object.keys(state.pMap||{}).filter(t=>!state.removedSet.has(t));
+  if(activeKeys.length>=2){
+    const subMap=Object.fromEntries(activeKeys.map(t=>[t,state.priceData[t]]));
+    const res=calcMVO(subMap);
+    if(res){
+      state._cachedMvo=res;
+      const strat=state.activeStrategy||'maxSharpe';
+      state.wts={...res[strat].weights};
+      state.pMap=subMap;
+    }
+  }
+  renderOneCol(mode,state);
+  renderBothBacktest();
+  renderBothAllocTable();
+}
+
+// ════════════════════════════════════════════════════════
+// ⑥ 配置明細表
+// ════════════════════════════════════════════════════════
+function renderBothAllocTable(){
+  renderOneAllocTable('sys',sysState);
+  renderOneAllocTable('usr',usrState);
+}
+
+function renderOneAllocTable(mode,state){
+  const{wts,removedSet}=state; const prefSet=state.prefSet instanceof Set?state.prefSet:new Set(state.prefSet||[]);
+  const activeWts=Object.fromEntries(Object.entries(wts).filter(([t])=>!removedSet.has(t)));
+  const sorted=Object.entries(activeWts).sort((a,b)=>b[1]-a[1]);
+  const tbodyEl=$(mode+'-alloc-tbody');
+  if(!sorted.length){tbodyEl.innerHTML='<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px">無資料</td></tr>';return;}
+  const maxWt=sorted[0][1];
+  tbodyEl.innerHTML=sorted.map(([t,w],i)=>{
+    const info=getInfo(t);
+    const cat=info.category||'stock';
+    const isPref=prefSet.has(t);
+    return`<tr>
+      <td style="color:var(--muted);font-size:.75rem">${i+1}</td>
+      <td><strong>${t}</strong>${isPref?'<span style="font-size:.6rem;background:var(--accent);color:#fff;padding:1px 4px;border-radius:8px;margin-left:3px">自選</span>':''}</td>
+      <td><span class="cat cat-${cat}">${CAT_LABEL[cat]}</span></td>
+      <td style="font-weight:700">${(w*100).toFixed(2)}%</td>
+      <td><div class="alloc-bar-wrap">
+        <div class="alloc-bar"><div class="alloc-fill" style="width:${(w/maxWt*100).toFixed(1)}%;background:${CAT_COLOR[cat]}"></div></div>
+      </div></td>
+      <td>${info.cost!=null?info.cost+'%':'—'}</td>
+      <td>${info.mktcap!=null?Math.round(info.mktcap):'—'}</td>
+    </tr>`;
+  }).join('');
+  const tot=Object.values(activeWts).reduce((s,v)=>s+v,0);
+  tbodyEl.innerHTML+=`<tr style="background:var(--light);font-weight:700">
+    <td colspan="3" style="text-align:right;color:var(--muted);font-size:.75rem">合計</td>
+    <td>${(tot*100).toFixed(2)}%</td><td colspan="3"></td>
+  </tr>`;
+}
+
+// ════════════════════════════════════════════════════════
+// ⑥ 回測績效
+// ════════════════════════════════════════════════════════
+function updateOverviewStats(cumReturn, mdd, sharpe, eqCumReturn){
+  const cumEl  = document.getElementById('ov-cum-val');
+  const mddEl  = document.getElementById('ov-mdd-val');
+  const shpEl  = document.getElementById('ov-sharpe-val');
+  const subEl  = document.getElementById('ov-cum-sub');
+  if(cumEl)  cumEl.textContent  = cumReturn!=null ? pct(cumReturn) : '—';
+  if(mddEl)  mddEl.textContent  = mdd!=null       ? pct(mdd)       : '—';
+  if(shpEl)  shpEl.textContent  = sharpe!=null     ? fmt2(sharpe)   : '—';
+  if(subEl && eqCumReturn!=null) subEl.textContent = 'vs 等權 '+pct(eqCumReturn);
+}
+
+function renderBothBacktest(){
+  const bt=gData.backtest||{};
+  const ms=bt.metrics?.smart_e;
+  const me=bt.metrics?.equal_weight_100;
+
+  // ── 統一用 state.pMap 做回測（確保價格和權重一致）
+  function stateBacktest(state){
+    const pMap = state.pMap||{};
+    // 先取有 pMap 資料的 wts
+    let activeWts = Object.fromEntries(
+      Object.entries(state.wts).filter(([t])=>!state.removedSet.has(t)&&pMap[t])
+    );
+    if(Object.keys(activeWts).length<2) return null;
+    // 重新正規化，確保總和為 1
+    const wSum = Object.values(activeWts).reduce((s,v)=>s+v,0);
+    if(wSum<=0) return null;
+    activeWts = Object.fromEntries(Object.entries(activeWts).map(([t,w])=>[t,w/wSum]));
+    const activePMap = Object.fromEntries(Object.keys(activeWts).map(t=>[t,pMap[t]]));
+    return calcBacktest(activePMap, activeWts);
+  }
+
+  const sysLabel = sysState.removedSet.size?`移除 ${[...sysState.removedSet].join('+')} 後`:'Smart-E 系統推薦';
+  const usrLabel = usrState.allTickers.length?'含投資人自選':'（未設定偏好）';
+
+  // 系統推薦績效
+  let sysMetrics = ms;  // 預設用 pipeline 結果
+  const sysCalc  = stateBacktest(sysState);
+  if(sysCalc) sysMetrics = {cumulative_return:sysCalc.cumReturn, max_drawdown:sysCalc.mdd, sharpe:sysCalc.sharpe};
+
+  // 自選組合績效
+  let usrMetrics = null;
+  if(usrState.allTickers.length>0){
+    const usrCalc = stateBacktest(usrState);
+    if(usrCalc) usrMetrics = {cumulative_return:usrCalc.cumReturn, max_drawdown:usrCalc.mdd, sharpe:usrCalc.sharpe};
+  }
+
+  // 超額報酬 badge
+  const eqCum = me?.cumulative_return;
+  const excessBadge = (v,ref) => {
+    if(v==null||ref==null) return '';
+    const diff = v - ref;
+    const col  = diff>=0?'#2d9e6b':'#c0392b';
+    return `<span style="font-size:.68rem;padding:1px 6px;border-radius:10px;margin-left:5px;background:${col}22;color:${col};font-weight:700">${diff>=0?'+':''}${(diff*100).toFixed(1)}% vs 等權</span>`;
+  };
+
+  $('metrics-3').innerHTML=`
+    <div class="metric-block smart">
+      <div class="mb-label">🤖 ${sysLabel}</div>
+      <div class="metric-row"><span class="mk">累積報酬</span><span class="mv">${sysMetrics?pct(sysMetrics.cumulative_return):'—'}${excessBadge(sysMetrics?.cumulative_return,eqCum)}</span></div>
+      <div class="metric-row"><span class="mk">最大回檔</span><span class="mv">${sysMetrics?pct(sysMetrics.max_drawdown):'—'}</span></div>
+      <div class="metric-row"><span class="mk">夏普比率</span><span class="mv">${sysMetrics?fmt2(sysMetrics.sharpe):'—'}</span></div>
+    </div>
+    <div class="metric-block smart2">
+      <div class="mb-label">👤 ${usrLabel}</div>
+      <div class="metric-row"><span class="mk">累積報酬</span><span class="mv">${usrMetrics?pct(usrMetrics.cumReturn):'—'}${excessBadge(usrMetrics?.cumReturn,eqCum)}</span></div>
+      <div class="metric-row"><span class="mk">最大回檔</span><span class="mv">${usrMetrics?pct(usrMetrics.mdd):'—'}</span></div>
+      <div class="metric-row"><span class="mk">夏普比率</span><span class="mv">${usrMetrics?fmt2(usrMetrics.sharpe):'—'}</span></div>
+    </div>
+    <div class="metric-block equal">
+      <div class="mb-label">等權組合（100 檔，基準）</div>
+      <div class="metric-row"><span class="mk">累積報酬</span><span class="mv">${me?pct(me.cumulative_return):'—'}</span></div>
+      <div class="metric-row"><span class="mk">最大回檔</span><span class="mv">${me?pct(me.max_drawdown):'—'}</span></div>
+      <div class="metric-row"><span class="mk">夏普比率</span><span class="mv">${me?fmt2(me.sharpe):'—'}</span></div>
+    </div>`;
+
+  renderBothAllocTable();
+
+  // 更新概覽區塊的回測數字
+  if(sysMetrics && me){
+    updateOverviewStats(
+      sysMetrics.cumulative_return,
+      sysMetrics.max_drawdown,
+      sysMetrics.sharpe,
+      me.cumulative_return
+    );
+  }
+
+  // ── 三條折線圖：系統推薦 / 含自選 / 等權100檔
+  const dates=bt.dates||[], equal=bt.equal_weight||[];
+  const step=Math.max(1,Math.floor(dates.length/300));
+  const dS=dates.filter((_,i)=>i%step===0||i===dates.length-1);
+  const eS=equal.filter((_,i)=>i%step===0||i===equal.length-1);
+
+  // 系統推薦曲線：優先用 pipeline 回測結果，有移除則用前端重算
+  let sysLine=bt.smart_e||[];
+  if(sysState.removedSet.size>0){
+    const aw=Object.fromEntries(Object.entries(sysState.wts).filter(([t])=>!sysState.removedSet.has(t)));
+    const subMap=Object.fromEntries(Object.entries(aw).filter(([t])=>sysState.priceData[t]).map(([t,w])=>[t,sysState.priceData[t]]));
+    if(Object.keys(subMap).length>=2){
+      const r=calcBacktest(subMap,Object.fromEntries(Object.entries(aw).filter(([t])=>subMap[t])));
+      if(r) sysLine=r.cumArr;
+    }
+  }
+
+  // 含自選曲線：前端計算
+  let usrLine=null;
+  if(usrState.allTickers.length>0&&Object.keys(usrState.priceData).length>0){
+    const aw=Object.fromEntries(Object.entries(usrState.wts).filter(([t])=>!usrState.removedSet.has(t)));
+    const subMap=Object.fromEntries(Object.entries(aw).filter(([t])=>usrState.priceData[t]).map(([t,w])=>[t,usrState.priceData[t]]));
+    if(Object.keys(subMap).length>=2){
+      const r=calcBacktest(subMap,Object.fromEntries(Object.entries(aw).filter(([t])=>subMap[t])));
+      if(r) usrLine=r.cumArr;
+    }
+  }
+
+  // 對齊長度（取最短）
+  const minLen=Math.min(dS.length, sysLine.length, eS.length, usrLine?usrLine.length:Infinity);
+  const dTrim=dS.slice(-minLen);
+  const sTrim=sysLine.slice(-minLen).filter((_,i)=>i%step===0||i===minLen-1);
+  const eTrim=eS.slice(-minLen);
+  const uTrim=usrLine?usrLine.slice(-minLen).filter((_,i)=>i%step===0||i===minLen-1):null;
+
+  // Legend
+  const hasUsr=!!usrLine;
+  $('bt-legend').innerHTML=`
+    <div class="legend-item"><div class="dot" style="background:#1e2d45"></div>系統推薦（Smart-E）</div>
+    ${hasUsr?'<div class="legend-item"><div class="dot" style="background:var(--accent)"></div>含投資人自選</div>':''}
+    <div class="legend-item"><div class="dot" style="background:#607d8b"></div>100 檔等權</div>`;
+
+  const datasets=[
+    {label:'系統推薦（Smart-E）',data:sTrim,borderColor:'#1e2d45',backgroundColor:'rgba(30,45,69,.07)',borderWidth:2.2,pointRadius:0,fill:true,tension:0.3},
+    {label:'100檔等權',data:eTrim,borderColor:'#607d8b',backgroundColor:'transparent',borderWidth:1.6,pointRadius:0,borderDash:[6,4],tension:0.3},
+  ];
+  if(hasUsr&&uTrim){
+    datasets.splice(1,0,{label:'含投資人自選',data:uTrim,borderColor:'#4d9de0',backgroundColor:'rgba(77,157,224,.07)',borderWidth:2,pointRadius:0,fill:false,tension:0.3});
+  }
+
+  destroyChart('bt');
+  charts['bt']=new Chart($('backtest-chart'),{
+    type:'line',
+    data:{labels:dTrim,datasets},
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{maxTicksLimit:8,font:{size:10}},grid:{display:false}},
+        y:{ticks:{font:{size:10},callback:v=>v.toFixed(2)+'x'},grid:{color:'rgba(0,0,0,.05)'}}
+      },
+      interaction:{mode:'index',intersect:false}
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// ⑦ AI 分析
+// ════════════════════════════════════════════════════════
+async function runAI(force=false){
+  const contentEl=$('ai-content');
+  contentEl.innerHTML='<div class="ai-loading"><div class="ai-spinner"></div>分析中，請稍候...</div>';
+
+  const mvoWts=sysState.wts;
+  const activeWts=Object.fromEntries(Object.entries(mvoWts).filter(([t])=>!sysState.removedSet.has(t)));
+  const bt=gData.backtest?.metrics||{};
+  const ms=bt.smart_e;
+  const me=bt.equal_weight_100;
+
+  // 整理組合資訊
+  const holdings=Object.entries(activeWts).sort((a,b)=>b[1]-a[1]).map(([t,w])=>{
+    const info=getInfo(t);
+    return`${t}（${CAT_LABEL[info.category||'stock']}，${(w*100).toFixed(1)}%，費用率${info.cost??'—'}%）`;
+  }).join('\n');
+
+  const prompt=`你是一位專業的台灣ETF投資顧問，請針對以下投資組合提供繁體中文的分析建議：
+
+【投資組合】
+${holdings}
+
+【回測績效（近3年）】
+- 累積報酬：${ms?pct(ms.cumulative_return):'N/A'}
+- 最大回檔：${ms?pct(ms.max_drawdown):'N/A'}
+- 夏普比率：${ms?fmt2(ms.sharpe):'N/A'}
+- 對比100檔等權組合累積報酬：${me?pct(me.cumulative_return):'N/A'}，夏普比率：${me?fmt2(me.sharpe):'N/A'}
+
+請從以下角度提供建議（每點2-3句）：
+1. 組合特色與風險集中度分析
+2. 費用率評估
+3. 相對於市場（100檔等權）的優劣勢
+4. 潛在風險提示
+5. 具體改善建議
+
+請以條列式呈現，語氣專業但易懂，避免過度樂觀。`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.map(c=>c.text||'').join('\n')||'分析失敗，請重試。';
+    contentEl.textContent=text;
+  }catch(e){
+    contentEl.textContent='⚠️ 分析失敗：'+e.message;
+  }
+}
+
+// 綁定按鈕事件（確保 DOM 已存在）
+document.getElementById('btn-apply').addEventListener('click', applyPrefs);
+document.getElementById('btn-clear').addEventListener('click', clearPrefs);
+document.getElementById('btn-ai').addEventListener('click', ()=>runAI(false));
+document.getElementById('btn-ai2').addEventListener('click', ()=>runAI(true));
+
+init();
+</script>
+</body>
+</html>
